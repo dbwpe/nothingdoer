@@ -1,0 +1,58 @@
+version: 2
+
+workflows:
+  version: 2
+  test_and_build:
+    jobs:
+      - test
+      - build:
+          requires:
+            - test
+
+jobs:
+  test:
+    docker:
+      - image: themattrix/tox
+    working_directory: /app
+
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - v1-tox-{{ checksum "tox.ini" }}
+            - v1-tox
+
+      - run:
+          name: install dependencies
+          command: |
+            pip install tox
+
+      - save_cache:
+          paths:
+            - ./.tox
+          key: v1-tox-{{ checksum "tox.ini" }}
+
+      - run:
+          name: run tests
+          command: |
+            tox
+      - store_test_results:
+          path: test/
+
+  build:
+    docker:
+      - image: python:3.7
+    working_directory: ~/nothingdoer
+
+    steps:
+      - checkout
+  
+      - run:
+          name: build package
+          command: |
+            python setup.py sdist
+
+      - store_artifacts:
+          path: dist/nothingdoer-1.0.0.tar.gz
+          destination: nothingdoer-1.0.0.tar.gz
